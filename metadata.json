@@ -1,0 +1,6 @@
+{
+  "name": "CodeLingo",
+  "description": "Uma plataforma gamificada estilo Duolingo para aprender programação (HTML, Python, JavaScript) com conquistas, rankings competitivos, desafios rápidos e metas personalizadas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

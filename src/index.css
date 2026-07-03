@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  background-color: #0f172a; /* Deep default slate background */
+}
+
+/* Custom 3D Tactile Buttons & Elements */
+.tactile-card {
+  border: 2px solid rgba(226, 232, 240, 0.8);
+  border-bottom-width: 6px;
+  border-bottom-color: rgba(203, 213, 225, 1);
+  border-radius: 1.5rem;
+  transition: all 0.15s ease;
+}
+
+.dark .tactile-card {
+  border-color: rgba(30, 41, 59, 0.8);
+  border-bottom-color: rgba(15, 23, 42, 1);
+}
+
+/* Tactile Active States on hover/click */
+.tactile-card:hover {
+  transform: translateY(-2px);
+}
+
+.tactile-card:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+/* 3D Level Nodes for Duolingo-style path */
+.tactile-node-html {
+  background-color: #f97316;
+  border-bottom: 8px solid #c2410c;
+  border-radius: 40%;
+  box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.3);
+  transition: all 0.1s ease;
+}
+.tactile-node-html:hover:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 4px;
+}
+.tactile-node-html:active:not(:disabled) {
+  transform: translateY(6px);
+  border-bottom-width: 2px;
+}
+
+.tactile-node-python {
+  background-color: #3b82f6;
+  border-bottom: 8px solid #1d4ed8;
+  border-radius: 40%;
+  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+  transition: all 0.1s ease;
+}
+.tactile-node-python:hover:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 4px;
+}
+.tactile-node-python:active:not(:disabled) {
+  transform: translateY(6px);
+  border-bottom-width: 2px;
+}
+
+.tactile-node-javascript {
+  background-color: #facc15;
+  border-bottom: 8px solid #ca8a04;
+  border-radius: 40%;
+  box-shadow: 0 10px 15px -3px rgba(250, 204, 21, 0.3);
+  transition: all 0.1s ease;
+}
+.tactile-node-javascript:hover:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 4px;
+}
+.tactile-node-javascript:active:not(:disabled) {
+  transform: translateY(6px);
+  border-bottom-width: 2px;
+}
+
+.tactile-node-locked {
+  background-color: #334155;
+  border-bottom: 8px solid #1e293b;
+  border-radius: 50%;
+  cursor: not-allowed;
+}
+
+/* Tactile Interactive Buttons */
+.tactile-btn {
+  border-bottom-width: 4px !important;
+  transition: all 0.1s ease;
+}
+.tactile-btn:hover:not(:disabled) {
+  transform: translateY(1px);
+  border-bottom-width: 3px !important;
+}
+.tactile-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  border-bottom-width: 1px !important;
+}
+
+/* Custom Webkit scrollbar for premium touch */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(88, 204, 2, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(88, 204, 2, 0.4);
+}
+
