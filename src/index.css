@@ -6,10 +6,18 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+@variant dark (&:where(.dark, .dark *));
+
 body {
   font-family: var(--font-sans);
   overflow-x: hidden;
-  background-color: #0f172a; /* Deep default slate background */
+  background-color: #f8fafc; /* bg-slate-50 default */
+  color: #1e293b; /* text-slate-800 default */
+}
+
+.dark body {
+  background-color: #020617; /* bg-slate-950 default */
+  color: #f1f5f9; /* text-slate-100 default */
 }
 
 /* Custom 3D Tactile Buttons & Elements */

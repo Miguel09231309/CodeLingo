@@ -49,7 +49,9 @@ export default function Sidebar({
   const t = {
     restore: lang === 'pt' ? 'Recarregar Vidas' : 'Restore Lives',
     streak: lang === 'pt' ? 'dias de ofensiva' : 'day streak',
-    sync: lang === 'pt' ? 'Nuvem sincronizada' : 'Cloud synchronized'
+    sync: lang === 'pt' ? 'Nuvem sincronizada' : 'Cloud synchronized',
+    dark: lang === 'pt' ? 'Escuro' : 'Dark',
+    light: lang === 'pt' ? 'Claro' : 'Light'
   };
 
   return (
@@ -66,7 +68,6 @@ export default function Sidebar({
               <h1 className="font-black text-2xl tracking-tighter text-slate-800 dark:text-white">
                 Code<span className="text-[#58CC02]">Lingo</span>
               </h1>
-              <span className="text-2xs text-slate-400 dark:text-slate-500 font-mono tracking-widest uppercase font-black">Beta Dev v1.0</span>
             </div>
           </div>
 
@@ -151,12 +152,12 @@ export default function Sidebar({
               {theme === 'light' ? (
                 <>
                   <Moon className="w-4 h-4" />
-                  <span>Dark</span>
+                  <span>{t.dark}</span>
                 </>
               ) : (
                 <>
                   <Sun className="w-4 h-4" />
-                  <span>Light</span>
+                  <span>{t.light}</span>
                 </>
               )}
             </button>

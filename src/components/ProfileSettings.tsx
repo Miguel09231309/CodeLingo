@@ -9,13 +9,17 @@ import {
   Trash2, 
   WifiOff, 
   Fingerprint, 
-  Lock
+  Lock,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Language, UserProgress } from '../types';
 
 interface ProfileSettingsProps {
   lang: Language;
   setLang: (lang: Language) => void;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
   progress: UserProgress;
   onUpdateProgress: (update: Partial<UserProgress>) => void;
   onResetProgress: () => void;
@@ -24,6 +28,8 @@ interface ProfileSettingsProps {
 export default function ProfileSettings({
   lang,
   setLang,
+  theme,
+  toggleTheme,
   progress,
   onUpdateProgress,
   onResetProgress
@@ -34,6 +40,10 @@ export default function ProfileSettings({
     subtitle: lang === 'pt' ? 'Controle sua segurança, privacidade, idiomas e sincronização na nuvem.' : 'Manage your security, privacy, languages, and cloud backups.',
     general: lang === 'pt' ? 'Ajustes Gerais' : 'General Adjustments',
     langLabel: lang === 'pt' ? 'Idioma de Preferência' : 'Preferred Language',
+    themeLabel: lang === 'pt' ? 'Tema Visual' : 'Visual Theme',
+    themeSub: lang === 'pt' ? 'Alternar entre tema claro e escuro' : 'Switch between light and dark theme',
+    lightTheme: lang === 'pt' ? 'Claro' : 'Light',
+    darkTheme: lang === 'pt' ? 'Escuro' : 'Dark',
     push: lang === 'pt' ? 'Notificações Push' : 'Push Notifications',
     pushSub: lang === 'pt' ? 'Lembretes inteligentes contextuais de metas' : 'Smart contextual target reminders',
     offline: lang === 'pt' ? 'Modo Offline Ativo' : 'Simulated Offline Mode',
@@ -126,6 +136,40 @@ export default function ProfileSettings({
                 }`}
               >
                 English
+              </button>
+            </div>
+          </div>
+
+          {/* Theme selector row */}
+          <div className="flex items-center justify-between py-3.5">
+            <div className="space-y-0.5">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                {theme === 'light' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+                <span>{t.themeLabel}</span>
+              </span>
+              <p className="text-3xs text-slate-400 dark:text-slate-500">{t.themeSub}</p>
+            </div>
+            
+            <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <button
+                id="theme-light-btn"
+                onClick={() => theme !== 'light' && toggleTheme()}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                  theme === 'light' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/55' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <Sun className="w-3.5 h-3.5" />
+                <span>{t.lightTheme}</span>
+              </button>
+              <button
+                id="theme-dark-btn"
+                onClick={() => theme !== 'dark' && toggleTheme()}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                  theme === 'dark' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <Moon className="w-3.5 h-3.5" />
+                <span>{t.darkTheme}</span>
               </button>
             </div>
           </div>

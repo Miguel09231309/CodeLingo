@@ -64,7 +64,17 @@ export default function App() {
 
   const [currentTab, setCurrentTab] = React.useState<string>('lessons');
   const [lang, setLang] = React.useState<Language>('pt');
-  const [theme, setTheme] = React.useState<'light' | 'dark'>('dark'); // elegant default dark theme
+  const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('codelingo_theme');
+      if (saved === 'light' || saved === 'dark') {
+        return saved;
+      }
+    } catch (e) {
+      console.warn('Failed to load theme from localStorage', e);
+    }
+    return 'dark'; // elegant default dark theme
+  });
   const [activeLesson, setActiveLesson] = React.useState<Lesson | null>(null);
   
   // Custom toast notifications for achievements and streaks!
@@ -74,6 +84,16 @@ export default function App() {
   React.useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(progress));
   }, [progress]);
+
+  // Sync theme to document.documentElement and localStorage on update
+  React.useEffect(() => {
+    localStorage.setItem('codelingo_theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   // Handle system level calculation dynamically based on XP
   const calculateLevelAndCheck = (newXp: number, currentLevel: number): number => {
@@ -391,6 +411,8 @@ export default function App() {
                     <ProfileSettings
                       lang={lang}
                       setLang={setLang}
+                      theme={theme}
+                      toggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
                       progress={progress}
                       onUpdateProgress={handleUpdateProgress}
                       onResetProgress={handleResetProgress}
