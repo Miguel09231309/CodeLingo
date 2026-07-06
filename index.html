@@ -1,13 +1,1853 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <title>CodeLingo - Aprenda Programação Gamificada</title>
+    <!-- Tailwind CSS Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap');
+      
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.2s ease-out forwards;
+      }
+      
+      /* Duolingo style tactile click elements */
+      .tactile-card {
+        border-bottom-width: 4px;
+        transition: all 0.1s;
+      }
+      .tactile-card:active:not(:disabled) {
+        transform: translateY(2px);
+        border-bottom-width: 2px;
+      }
+    </style>
+    <!-- React & ReactDOM CDNs -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel Standalone to compile JSX in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
   </head>
-  <body>
+  <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef, useMemo } = React;
+
+      // SFX Audio Controller (synthesized retro sounds)
+      class AudioController {
+        constructor() {
+          this.ctx = null;
+        }
+        init() {
+          if (!this.ctx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) this.ctx = new AudioContextClass();
+          }
+        }
+        playSuccess() {
+          try {
+            this.init();
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc1 = this.ctx.createOscillator();
+            const osc2 = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc1.type = 'sine';
+            osc2.type = 'triangle';
+            osc1.frequency.setValueAtTime(523.25, now);
+            osc1.frequency.setValueAtTime(659.25, now + 0.08);
+            osc1.frequency.setValueAtTime(783.99, now + 0.16);
+            osc1.frequency.setValueAtTime(1046.50, now + 0.24);
+            osc2.frequency.setValueAtTime(261.63, now);
+            osc2.frequency.setValueAtTime(329.63, now + 0.08);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.4);
+            osc2.stop(now + 0.4);
+          } catch(e) { console.warn(e); }
+        }
+        playFailure() {
+          try {
+            this.init();
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.3);
+          } catch(e) { console.warn(e); }
+        }
+        playLevelUp() {
+          try {
+            this.init();
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(392.00, now);
+            osc.frequency.setValueAtTime(523.25, now + 0.1);
+            osc.frequency.setValueAtTime(659.25, now + 0.2);
+            osc.frequency.setValueAtTime(783.99, now + 0.3);
+            osc.frequency.setValueAtTime(1046.50, now + 0.4);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.7);
+          } catch(e) { console.warn(e); }
+        }
+      }
+      const sfx = new AudioController();
+
+      // Dynamic LucideIcon Component
+      const LucideIcon = ({ name, className = '', size = 20, strokeWidth = 2, fill = 'none' }) => {
+        const kebabName = name
+          .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+          .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+          .toLowerCase();
+        
+        // Find by name (PascalCase or kebab-case or lowercased)
+        const iconData = window.lucide?.icons?.[name] || 
+                         window.lucide?.icons?.[name.charAt(0).toUpperCase() + name.slice(1)] ||
+                         window.lucide?.icons?.[kebabName];
+                         
+        if (!iconData) {
+          return (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth={strokeWidth}>
+              <circle cx="12" cy="12" r="10" strokeDasharray="4 4" />
+            </svg>
+          );
+        }
+
+        const renderChildren = (nodes) => {
+          return nodes.map((node, idx) => {
+            const [childTag, childAttrs] = node;
+            const reactAttrs = {};
+            Object.keys(childAttrs).forEach(key => {
+              const reactKey = key.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+              reactAttrs[reactKey] = childAttrs[key];
+            });
+            reactAttrs.key = idx;
+            return React.createElement(childTag, reactAttrs);
+          });
+        };
+
+        const finalAttrs = {
+          xmlns: 'http://www.w3.org/2000/svg',
+          className: `lucide lucide-${kebabName} ${className}`,
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: fill === 'currentColor' ? 'currentColor' : fill,
+          stroke: 'currentColor',
+          strokeWidth: strokeWidth,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        };
+
+        return React.createElement('svg', finalAttrs, renderChildren(iconData));
+      };
+
+      // Real Lessons Data
+      const LESSONS = [
+        {
+          id: 'html-1',
+          subject: 'html',
+          title: { pt: 'Introdução ao HTML', en: 'Introduction to HTML' },
+          levelRequired: 1,
+          xpReward: 15,
+          exercises: [
+            {
+              id: 'html-1-1',
+              type: 'multiple-choice',
+              question: { pt: 'O que significa a sigla HTML?', en: 'What does HTML stand for?' },
+              options: ['Hyper Text Markup Language', 'High Text Machine Language', 'Hyper Transfer Modular Language', 'Home Tool Markup Language'],
+              correctAnswer: 'Hyper Text Markup Language',
+              hint: { pt: 'É uma linguagem de marcação de hipertexto.', en: 'It is a hyper text markup language.' }
+            },
+            {
+              id: 'html-1-2',
+              type: 'fill-blank',
+              question: { pt: 'Complete a tag para criar o maior título de cabeçalho:', en: 'Complete the tag to create the largest heading element:' },
+              codeSnippet: '<___1>Olá, Mundo!</___1>',
+              options: ['h1', 'head', 'header', 'p'],
+              correctAnswer: 'h1',
+              hint: { pt: 'Usamos h1 até h6. Qual é o maior?', en: 'We use h1 through h6. Which is the largest?' }
+            },
+            {
+              id: 'html-1-3',
+              type: 'order-code',
+              question: { pt: 'Ordene as tags para uma estrutura básica válida:', en: 'Order the tags to create a valid basic structure:' },
+              options: ['<!DOCTYPE html>', '<html>', '  <body>Olá</body>', '</html>'],
+              correctAnswer: '<!DOCTYPE html>|<html>|  <body>Olá</body>|</html>',
+              hint: { pt: 'O DOCTYPE sempre vem primeiro, seguido pelo html.', en: 'DOCTYPE always comes first, followed by html.' }
+            }
+          ]
+        },
+        {
+          id: 'html-2',
+          subject: 'html',
+          title: { pt: 'Atributos e Links', en: 'Attributes and Links' },
+          levelRequired: 2,
+          xpReward: 20,
+          exercises: [
+            {
+              id: 'html-2-1',
+              type: 'multiple-choice',
+              question: { pt: 'Qual atributo define o destino de um link em um <a>?', en: 'Which attribute defines the link destination in an <a> tag?' },
+              options: ['href', 'src', 'link', 'target'],
+              correctAnswer: 'href',
+              hint: { pt: 'Significa "hypertext reference".', en: 'Short for "hypertext reference".' }
+            },
+            {
+              id: 'html-2-2',
+              type: 'fill-blank',
+              question: { pt: 'Preencha o atributo que fornece texto alternativo para acessibilidade:', en: 'Fill in the attribute that provides alternative text for accessibility:' },
+              codeSnippet: '<img src="logo.png" ___1="Logotipo da Empresa">',
+              options: ['alt', 'title', 'desc', 'name'],
+              correctAnswer: 'alt',
+              hint: { pt: 'Significa "alternative".', en: 'Short for "alternative".' }
+            }
+          ]
+        },
+        {
+          id: 'python-1',
+          subject: 'python',
+          title: { pt: 'Variáveis e Saída', en: 'Variables and Output' },
+          levelRequired: 1,
+          xpReward: 15,
+          exercises: [
+            {
+              id: 'py-1-1',
+              type: 'multiple-choice',
+              question: { pt: 'Como você imprime "Olá" no console em Python?', en: 'How do you print "Hello" to the console in Python?' },
+              options: ['print("Olá")', 'echo("Olá")', 'console.log("Olá")', 'System.out.println("Olá")'],
+              correctAnswer: 'print("Olá")',
+              hint: { pt: 'Python usa a função built-in print().', en: 'Python uses the built-in print() function.' }
+            },
+            {
+              id: 'py-1-2',
+              type: 'fill-blank',
+              question: { pt: 'Complete o código para verificar se x é maior que 10:', en: 'Complete the code to check if x is greater than 10:' },
+              codeSnippet: 'x = 15\n___1 x > 10:\n    print("Maior")',
+              options: ['if', 'while', 'for', 'def'],
+              correctAnswer: 'if',
+              hint: { pt: 'Palavra-chave condicional.', en: 'Conditional statement keyword.' }
+            }
+          ]
+        },
+        {
+          id: 'javascript-1',
+          subject: 'javascript',
+          title: { pt: 'Fundamentos de JS', en: 'JS Fundamentals' },
+          levelRequired: 1,
+          xpReward: 15,
+          exercises: [
+            {
+              id: 'js-1-1',
+              type: 'multiple-choice',
+              question: { pt: 'Qual palavra-chave declara uma constante em JavaScript?', en: 'Which keyword declares a constant in JavaScript?' },
+              options: ['const', 'let', 'var', 'constant'],
+              correctAnswer: 'const',
+              hint: { pt: 'Vem do termo "constant".', en: 'Short for "constant".' }
+            },
+            {
+              id: 'js-1-2',
+              type: 'fill-blank',
+              question: { pt: 'Complete o código para registrar uma mensagem:', en: 'Complete the code to log a message:' },
+              codeSnippet: 'console.___1("Olá JS!");',
+              options: ['log', 'print', 'write', 'alert'],
+              correctAnswer: 'log',
+              hint: { pt: 'O método mais usado do objeto console.', en: 'Most common console method.' }
+            }
+          ]
+        }
+      ];
+
+      const ACHIEVEMENTS = [
+        { id: 'ach-1', title: { pt: 'Primeiro Passo', en: 'First Step' }, desc: { pt: 'Complete sua primeira lição no CodeLingo', en: 'Complete your first lesson' }, icon: 'Compass', xpBonus: 50 },
+        { id: 'ach-2', title: { pt: 'Focado e Determinado', en: 'Focused & Committed' }, desc: { pt: 'Mantenha uma ofensiva de 3 dias', en: 'Keep a 3-day learning streak' }, icon: 'Flame', xpBonus: 100 },
+        { id: 'ach-3', title: { pt: 'Mestre Acumulador', en: 'XP Accumulator' }, desc: { pt: 'Alcance um total de 200 XP', en: 'Reach 200 total XP' }, icon: 'Award', xpBonus: 150 },
+        { id: 'ach-4', title: { pt: 'Dev Conectado', en: 'Connected Dev' }, desc: { pt: 'Sincronize sua conta com o GitHub', en: 'Sync your account with GitHub' }, icon: 'Github', xpBonus: 120 },
+        { id: 'ach-5', title: { pt: 'Campeão de Duelos', en: 'Duel Champion' }, desc: { pt: 'Vença um Desafio Rápido de Amigos', en: 'Win a Quick 1v1 Friend Duel' }, icon: 'Zap', xpBonus: 100 }
+      ];
+
+      // Custom SVG Bar Chart Component for Statistics Tab
+      const SVGBarChart = ({ data, lang }) => {
+        const maxValue = Math.max(...data.map(d => d.minutes), 15);
+        const height = 150;
+        const width = 450;
+        const padding = 20;
+
+        return (
+          <div className="w-full select-none pt-4">
+            <svg viewBox="0 0 450 180" className="w-full h-full">
+              {/* Horizontal grid lines */}
+              {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
+                const y = padding + (height - padding * 2) * (1 - p);
+                const val = Math.round(maxValue * p);
+                return (
+                  <g key={i} className="opacity-30 dark:opacity-10">
+                    <line x1="40" y1={y} x2="420" y2={y} stroke="#94A3B8" strokeWidth="1" strokeDasharray="3 3" />
+                    <text x="30" y={y + 4} fill="#94A3B8" fontSize="9" fontWeight="bold" textAnchor="end">{val}m</text>
+                  </g>
+                );
+              })}
+              
+              {/* Bars */}
+              {data.map((d, i) => {
+                const x = 50 + i * 50;
+                const barHeight = (d.minutes / maxValue) * (height - padding * 2);
+                const y = height - padding - barHeight;
+                
+                return (
+                  <g key={i} className="group">
+                    <rect
+                      x={x}
+                      y={y}
+                      width="26"
+                      height={Math.max(barHeight, 2)}
+                      rx="4"
+                      fill="#58CC02"
+                      className="transition-all duration-300 hover:fill-emerald-400 cursor-pointer"
+                    />
+                    <text
+                      x={x + 13}
+                      y="164"
+                      fill="#94A3B8"
+                      fontSize="9"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {d.day}
+                    </text>
+                    <title>{d.minutes} {lang === 'pt' ? 'minutos' : 'minutes'}</title>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        );
+      };
+
+      // Header component with quick stats for Mobile
+      const Sidebar = ({ currentTab, setCurrentTab, lang, setLang, theme, toggleTheme, progress, onRestoreHearts }) => {
+        const menuItems = [
+          { id: 'lessons', icon: 'Compass', pt: 'Aprender', en: 'Learn' },
+          { id: 'ranking', icon: 'Award', pt: 'Ranking', en: 'Leaderboard' },
+          { id: 'duels', icon: 'Users', pt: 'Duelos 1v1', en: '1v1 Duels' },
+          { id: 'forum', icon: 'MessageSquare', pt: 'Fórum', en: 'Forum' },
+          { id: 'stats', icon: 'BarChart3', pt: 'Estatísticas', en: 'Statistics' },
+          { id: 'settings', icon: 'Settings', pt: 'Configurações', en: 'Settings' },
+        ];
+
+        const t = {
+          restore: lang === 'pt' ? 'Recarregar Vidas' : 'Restore Lives',
+          streak: lang === 'pt' ? 'dias de ofensiva' : 'day streak',
+          xpTotal: lang === 'pt' ? 'XP Total' : 'Total XP',
+          dark: lang === 'pt' ? 'Escuro' : 'Dark',
+          light: lang === 'pt' ? 'Claro' : 'Light'
+        };
+
+        return (
+          <>
+            {/* Desktop Sidebar */}
+            <aside className="hidden md:flex flex-col w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-screen sticky top-0 p-4 justify-between transition-colors duration-300 z-40">
+              <div className="space-y-6">
+                {/* Logo */}
+                <div className="flex items-center gap-3 px-2 py-1 select-none">
+                  <div className="w-10 h-10 rounded-xl bg-[#58CC02] flex items-center justify-center shadow-lg shadow-[#58CC02]/20 border-b-4 border-emerald-700">
+                    <span className="font-black text-white text-2xl">C</span>
+                  </div>
+                  <div>
+                    <h1 className="font-black text-2xl tracking-tighter text-slate-800 dark:text-white">
+                      Code<span className="text-[#58CC02]">Lingo</span>
+                    </h1>
+                  </div>
+                </div>
+
+                {/* Quick stats panel */}
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 border border-slate-100 dark:border-slate-800/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-amber-500 font-bold text-sm">
+                      <LucideIcon name="Flame" className="fill-current" size={16} />
+                      <span>{progress.streak} {lang === 'pt' ? 'Dias' : 'Days'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-rose-500 font-bold text-sm">
+                      <LucideIcon name="Heart" className="fill-current" size={16} />
+                      <span>{progress.hearts}/5</span>
+                    </div>
+                  </div>
+
+                  {progress.hearts < 5 && (
+                    <button
+                      id="restore-hearts-btn"
+                      onClick={onRestoreHearts}
+                      className="w-full py-1 text-center text-xs font-semibold bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/80 text-rose-600 dark:text-rose-400 rounded-lg transition-all border border-rose-100 dark:border-rose-900/40"
+                    >
+                      {t.restore} (+100 XP)
+                    </button>
+                  )}
+
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                    <span>{t.xpTotal}: <b className="text-slate-600 dark:text-slate-300 font-sans">{progress.xp}</b></span>
+                    <span className="flex items-center gap-1">
+                      <span className={`w-1.5 h-1.5 rounded-full ${progress.isOffline ? 'bg-amber-400' : 'bg-emerald-500'}`} />
+                      {progress.isOffline ? 'Offline' : 'Online'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Sidebar Menu Nav */}
+                <nav className="space-y-1.5">
+                  {menuItems.map((item) => {
+                    const isActive = currentTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        id={`nav-${item.id}`}
+                        onClick={() => setCurrentTab(item.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-black text-xs tracking-wider uppercase transition-all border-2 ${
+                          isActive
+                            ? 'bg-slate-100 dark:bg-slate-800 border-[#58CC02] text-[#58CC02] shadow-sm'
+                            : 'border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <LucideIcon name={item.icon} size={16} />
+                        <span>{lang === 'pt' ? item.pt : item.en}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+
+              {/* Sidebar bottom configs */}
+              <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                {progress.githubSynced && (
+                  <div className="flex items-center gap-2 px-2 py-1 bg-slate-50 dark:bg-slate-850 rounded-xl">
+                    <LucideIcon name="Github" size={16} />
+                    <span className="text-[11px] font-bold truncate">@{progress.githubUsername}</span>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={toggleTheme}
+                    className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex-1 flex justify-center items-center gap-1.5 text-xs font-medium"
+                  >
+                    {theme === 'light' ? <LucideIcon name="Moon" size={14} /> : <LucideIcon name="Sun" size={14} />}
+                    <span>{theme === 'light' ? t.dark : t.light}</span>
+                  </button>
+                  <button
+                    onClick={() => setLang(lang === 'pt' ? 'en' : 'pt')}
+                    className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex-1 flex justify-center items-center text-xs font-black uppercase"
+                  >
+                    {lang}
+                  </button>
+                </div>
+              </div>
+            </aside>
+
+            {/* Mobile Top Navbar */}
+            <div className="md:hidden flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-3 sticky top-0 z-40">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#58CC02] flex items-center justify-center">
+                  <span className="font-black text-white text-lg">C</span>
+                </div>
+                <h1 className="font-black text-lg text-slate-800 dark:text-white tracking-tighter">CodeLingo</h1>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
+                  <LucideIcon name="Flame" className="fill-current" size={14} />
+                  <span>{progress.streak}</span>
+                </div>
+                <div className="flex items-center gap-1 text-rose-500 font-bold text-xs">
+                  <LucideIcon name="Heart" className="fill-current" size={14} />
+                  <span>{progress.hearts}</span>
+                </div>
+                <button
+                  onClick={() => setLang(lang === 'pt' ? 'en' : 'pt')}
+                  className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-xs font-black uppercase"
+                >
+                  {lang}
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="p-1.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                >
+                  {theme === 'light' ? <LucideIcon name="Moon" size={14} /> : <LucideIcon name="Sun" size={14} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Bottom Bar Nav */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around p-2">
+              {menuItems.map((item) => {
+                const isActive = currentTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setCurrentTab(item.id)}
+                    className={`flex flex-col items-center gap-0.5 text-slate-500 ${
+                      isActive ? 'text-[#58CC02] font-black' : 'font-medium'
+                    }`}
+                  >
+                    <LucideIcon name={item.icon} size={16} />
+                    <span className="text-[9px]">{lang === 'pt' ? item.pt : item.en}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </>
+        );
+      };
+
+      // Lessons Curriculum List Component
+      const LessonsList = ({ lessons, progress, onSelectLesson, lang }) => {
+        const [selectedSubject, setSelectedSubject] = useState('html');
+        const filteredLessons = lessons.filter(l => l.subject === selectedSubject);
+
+        const currentSubjectLevel = selectedSubject === 'html' ? progress.htmlLevel : selectedSubject === 'python' ? progress.pythonLevel : progress.jsLevel;
+
+        const colors = {
+          html: { bg: 'bg-orange-500', hover: 'hover:bg-orange-600', text: 'text-orange-500', border: 'border-orange-700', banner: 'from-orange-500 to-amber-500' },
+          python: { bg: 'bg-blue-500', hover: 'hover:bg-blue-600', text: 'text-blue-500', border: 'border-blue-700', banner: 'from-blue-500 to-indigo-500' },
+          javascript: { bg: 'bg-amber-500', hover: 'hover:bg-amber-600', text: 'text-amber-500', border: 'border-yellow-600', banner: 'from-amber-500 to-yellow-500' }
+        };
+
+        const subjectColors = colors[selectedSubject] || colors.html;
+
+        const dailyQuests = [
+          { id: 'dq-1', pt: 'Praticar hoje', en: 'Practice today', target: 1, current: progress.studyTimeTodayMinutes > 0 ? 1 : 0, xp: 25 },
+          { id: 'dq-2', pt: 'Acumular 50 XP', en: 'Accumulate 50 XP', target: 50, current: Math.min(50, progress.xp % 100), xp: 40 }
+        ];
+
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+            {/* Left Course Path Column */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Subject selectors */}
+              <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm">
+                {['html', 'python', 'javascript'].map((subj) => {
+                  const isActive = selectedSubject === subj;
+                  const c = colors[subj];
+                  return (
+                    <button
+                      key={subj}
+                      onClick={() => setSelectedSubject(subj)}
+                      className={`flex-1 py-2 text-center text-xs font-black rounded-xl uppercase transition-all flex items-center justify-center gap-1.5 ${
+                        isActive
+                          ? `${c.bg} text-white shadow-md`
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                      }`}
+                    >
+                      <span>{subj === 'javascript' ? 'JS' : subj.toUpperCase()}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Curriculum introduction card */}
+              <div className={`bg-gradient-to-r ${subjectColors.banner} text-white rounded-2xl p-5 shadow-md relative overflow-hidden`}>
+                <div className="relative z-10 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-white/20 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                      {selectedSubject.toUpperCase()}
+                    </span>
+                    <span className="bg-white/20 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold">
+                      Nível {currentSubjectLevel}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-extrabold tracking-tight">
+                    {selectedSubject === 'html' ? 'HTML5 & Estruturas Web' : selectedSubject === 'python' ? 'Lógica de Programação Python' : 'JavaScript Interativo'}
+                  </h2>
+                  <p className="text-white/80 text-xs max-w-md">
+                    {selectedSubject === 'html' 
+                      ? 'Aprenda a estruturar páginas web modernas usando tags semânticas e atributos úteis.' 
+                      : selectedSubject === 'python' 
+                        ? 'Domine a sintaxe do Python, controle fluxos condicionais e lógica de variáveis.' 
+                        : 'Adicione vida e dinâmica ao navegador controlando elementos via manipulação de DOM.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Map checkpoint nodes list */}
+              <div className="flex flex-col items-center py-4 space-y-10 relative">
+                <div className="absolute w-1 bg-slate-200 dark:bg-slate-800 top-4 bottom-4 left-1/2 -translate-x-1/2 pointer-events-none" />
+
+                {filteredLessons.map((lesson, idx) => {
+                  const isCompleted = idx < currentSubjectLevel - 1;
+                  const isUnlocked = idx <= currentSubjectLevel - 1;
+                  const staggeredClass = idx % 2 === 0 ? 'translate-x-4 md:translate-x-8' : '-translate-x-4 md:-translate-x-8';
+
+                  return (
+                    <div key={lesson.id} className={`relative flex flex-col items-center ${staggeredClass}`}>
+                      <button
+                        disabled={!isUnlocked}
+                        onClick={() => onSelectLesson(lesson)}
+                        className={`w-16 h-16 rounded-full flex items-center justify-center border-b-4 transition-all tactile-card ${
+                          isCompleted
+                            ? `${subjectColors.bg} ${subjectColors.border} text-white`
+                            : isUnlocked
+                              ? `${subjectColors.bg} ${subjectColors.border} hover:scale-105 text-white shadow-lg`
+                              : 'bg-slate-300 dark:bg-slate-800 border-slate-400 dark:border-slate-900 text-slate-400 cursor-not-allowed'
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <LucideIcon name="CheckCircle" strokeWidth={3} size={24} />
+                        ) : !isUnlocked ? (
+                          <LucideIcon name="Lock" size={20} />
+                        ) : (
+                          <LucideIcon name="Play" className="fill-current ml-0.5" size={24} />
+                        )}
+                      </button>
+                      
+                      <div className="mt-2 text-center">
+                        <span className="text-[9px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase">Lição {idx + 1}</span>
+                        <h4 className="text-xs font-extrabold text-slate-700 dark:text-slate-200 uppercase">{lesson.title[lang]}</h4>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right Quests/Achievements Sideboard */}
+            <div className="space-y-6">
+              {/* Daily Quests */}
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800/80 shadow-sm space-y-3">
+                <h3 className="font-black text-xs text-slate-700 dark:text-slate-200 uppercase flex items-center gap-1.5">
+                  <LucideIcon name="Trophy" className="text-amber-500" size={16} />
+                  <span>{lang === 'pt' ? 'Missões Diárias' : 'Daily Quests'}</span>
+                </h3>
+                <div className="space-y-3">
+                  {dailyQuests.map(q => {
+                    const pct = Math.min(100, (q.current / q.target) * 100);
+                    return (
+                      <div key={q.id} className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold uppercase">
+                          <span className="text-slate-600 dark:text-slate-400">{lang === 'pt' ? q.pt : q.en}</span>
+                          <span className="text-[#58CC02]">{q.current}/{q.target}</span>
+                        </div>
+                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                          <div className="bg-[#58CC02] h-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-slate-400 block text-right font-bold font-mono">+{q.xp} XP BONUS</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Achievements Log */}
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800/80 shadow-sm space-y-3">
+                <h3 className="font-black text-xs text-slate-700 dark:text-slate-200 uppercase flex items-center gap-1.5">
+                  <LucideIcon name="Award" className="text-emerald-500" size={16} />
+                  <span>{lang === 'pt' ? 'Conquistas' : 'Achievements'}</span>
+                </h3>
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {ACHIEVEMENTS.map(ach => {
+                    const isUnlocked = progress.unlockedAchievements.includes(ach.id);
+                    return (
+                      <div key={ach.id} className={`flex items-center gap-2.5 p-2 rounded-xl border ${isUnlocked ? 'bg-emerald-50/25 dark:bg-emerald-950/10 border-emerald-500/20' : 'border-transparent'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isUnlocked ? 'bg-[#58CC02] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                          <LucideIcon name={ach.icon} size={16} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`text-xs font-extrabold truncate ${isUnlocked ? 'text-slate-800 dark:text-slate-200' : 'text-slate-500'}`}>{ach.title[lang]}</h4>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate leading-snug">{ach.desc[lang]}</p>
+                        </div>
+                        {isUnlocked && <span className="text-[10px] text-[#58CC02] font-mono font-bold font-black">+{ach.xpBonus}XP</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // Quiz gameplay arena overlay container
+      const QuizContainer = ({ lesson, lang, onClose, onFinish }) => {
+        const [idx, setIdx] = useState(0);
+        const [selected, setSelected] = useState(null);
+        const [ordered, setOrdered] = useState([]);
+        const [lives, setLives] = useState(5);
+        const [checked, setChecked] = useState(false);
+        const [isCorrect, setIsCorrect] = useState(false);
+        const [gameState, setGameState] = useState('playing'); // playing, completed, failed
+        const [xpEarned, setXpEarned] = useState(0);
+
+        const currentEx = lesson.exercises[idx];
+
+        useEffect(() => {
+          setSelected(null);
+          setOrdered([]);
+          setChecked(false);
+          setIsCorrect(false);
+        }, [idx]);
+
+        if (!currentEx) return null;
+
+        const handleOptionSelect = (opt) => {
+          if (checked) return;
+          setSelected(opt);
+        };
+
+        const handleOrderToggle = (opt) => {
+          if (checked) return;
+          if (ordered.includes(opt)) {
+            setOrdered(ordered.filter(o => o !== opt));
+          } else {
+            setOrdered([...ordered, opt]);
+          }
+        };
+
+        const handleCheck = () => {
+          if (checked) return;
+          let correct = false;
+          if (currentEx.type === 'multiple-choice' || currentEx.type === 'fill-blank') {
+            correct = selected === currentEx.correctAnswer;
+          } else if (currentEx.type === 'order-code') {
+            correct = ordered.join('|') === currentEx.correctAnswer;
+          }
+
+          setIsCorrect(correct);
+          setChecked(true);
+
+          if (correct) {
+            sfx.playSuccess();
+            setXpEarned(prev => prev + 10);
+          } else {
+            sfx.playFailure();
+            const nextLives = lives - 1;
+            setLives(nextLives);
+            if (nextLives <= 0) setGameState('failed');
+          }
+        };
+
+        const handleContinue = () => {
+          if (idx + 1 < lesson.exercises.length) {
+            setIdx(idx + 1);
+          } else {
+            sfx.playLevelUp();
+            setGameState('completed');
+          }
+        };
+
+        const handleExit = () => {
+          if (gameState === 'completed') {
+            onFinish(xpEarned + lesson.xpReward, 5 - lives, true);
+          } else if (gameState === 'failed') {
+            onFinish(Math.round(xpEarned / 2), 5, false);
+          } else {
+            onClose();
+          }
+        };
+
+        const progressPct = ((idx) / lesson.exercises.length) * 100;
+
+        return (
+          <div className="fixed inset-0 bg-white dark:bg-slate-950 z-50 flex flex-col justify-between animate-fade-in text-slate-800 dark:text-slate-100">
+            {/* Header progress line */}
+            <header className="p-4 border-b border-slate-100 dark:border-slate-900 flex items-center justify-between max-w-4xl w-full mx-auto">
+              <button onClick={handleExit} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-full transition-all">
+                <LucideIcon name="X" size={24} />
+              </button>
+              <div className="flex-1 mx-4 max-w-lg bg-slate-100 dark:bg-slate-800 h-3.5 rounded-full overflow-hidden">
+                <div className="bg-[#58CC02] h-full transition-all duration-300" style={{ width: `${gameState === 'completed' ? 100 : progressPct}%` }} />
+              </div>
+              <div className="flex items-center gap-1 text-rose-500 font-bold">
+                <LucideIcon name="Heart" className="fill-current animate-pulse" size={20} />
+                <span className="font-mono text-sm">{lives}</span>
+              </div>
+            </header>
+
+            {/* Content panel */}
+            <main className="flex-1 overflow-y-auto px-4 py-6 flex flex-col items-center justify-center max-w-xl w-full mx-auto">
+              {gameState === 'playing' && (
+                <div className="w-full space-y-6">
+                  {/* Prompt */}
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-mono bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-black uppercase">
+                      {currentEx.type.replace('-', ' ')}
+                    </span>
+                    <h2 className="text-base md:text-lg font-extrabold">{currentEx.question[lang]}</h2>
+                  </div>
+
+                  {/* Code snippet visualization */}
+                  {currentEx.codeSnippet && (
+                    <div className="bg-slate-900 dark:bg-black rounded-xl p-4 border border-slate-800 font-mono text-xs text-slate-200 shadow-md">
+                      <pre className="whitespace-pre-wrap leading-relaxed">
+                        {currentEx.codeSnippet.split('___1').map((part, index, arr) => (
+                          <React.Fragment key={index}>
+                            {part}
+                            {index < arr.length - 1 && (
+                              <span className={`inline-block mx-1 px-2.5 py-0.5 rounded border-2 font-bold font-sans ${selected ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-slate-800 border-dashed border-slate-500 text-slate-400'}`}>
+                                {selected || '___'}
+                              </span>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Option Widgets */}
+                  {currentEx.type === 'multiple-choice' && (
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {currentEx.options.map((opt, i) => (
+                        <button
+                          key={opt}
+                          disabled={checked}
+                          onClick={() => handleOptionSelect(opt)}
+                          className={`w-full text-left px-4 py-3 rounded-xl border-2 font-bold text-xs flex items-center justify-between transition-all border-b-4 ${
+                            selected === opt
+                              ? 'border-[#58CC02] bg-[#58CC02]/5 text-[#58CC02] border-b-[#46a302]'
+                              : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <span>{opt}</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-850 text-slate-400">{i + 1}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {currentEx.type === 'fill-blank' && (
+                    <div className="flex flex-wrap gap-2.5 justify-center pt-2">
+                      {currentEx.options.map((opt) => (
+                        <button
+                          key={opt}
+                          disabled={checked}
+                          onClick={() => handleOptionSelect(opt)}
+                          className={`px-4 py-2.5 rounded-xl border-2 font-bold text-xs border-b-4 ${
+                            selected === opt
+                              ? 'border-[#58CC02] bg-[#58CC02]/10 text-[#58CC02] border-b-[#46a302]'
+                              : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-850'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {currentEx.type === 'order-code' && (
+                    <div className="space-y-4">
+                      {/* Drop slots container */}
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 min-h-[100px] space-y-1.5">
+                        <p className="text-[10px] text-slate-400 uppercase font-mono font-bold">{lang === 'pt' ? 'Sua sequência:' : 'Your sequence:'}</p>
+                        {ordered.length === 0 ? (
+                          <div className="text-xs text-slate-400 italic py-4 text-center">{lang === 'pt' ? 'Selecione os blocos abaixo para ordená-los...' : 'Select blocks below...'}</div>
+                        ) : (
+                          <div className="flex flex-col gap-1.5 animate-fade-in">
+                            {ordered.map((item) => (
+                              <div key={item} className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                <LucideIcon name="CornerDownRight" size={14} />
+                                <span>{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bank button selection */}
+                      <div className="flex flex-wrap gap-2">
+                        {currentEx.options.map((opt) => {
+                          const isUsed = ordered.includes(opt);
+                          return (
+                            <button
+                              key={opt}
+                              disabled={checked}
+                              onClick={() => handleOrderToggle(opt)}
+                              className={`px-3.5 py-2 rounded-xl border font-mono text-xs font-bold transition-all ${
+                                isUsed
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-dashed'
+                                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hint indicator */}
+                  <div className="flex gap-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-600 dark:text-amber-400 text-xs">
+                    <LucideIcon name="Info" size={16} />
+                    <p>{currentEx.hint[lang]}</p>
+                  </div>
+                </div>
+              )}
+
+              {gameState === 'failed' && (
+                <div className="text-center space-y-4 max-w-sm">
+                  <div className="w-16 h-16 rounded-full bg-rose-100 dark:bg-rose-950/40 text-rose-500 flex items-center justify-center mx-auto shadow-md">
+                    <LucideIcon name="AlertTriangle" size={32} />
+                  </div>
+                  <h2 className="text-xl font-extrabold">{lang === 'pt' ? 'Sem vidas restantes!' : 'No lives left!'}</h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+                    {lang === 'pt' ? 'Não se preocupe! Recarregue suas vidas na aba principal e tente de novo.' : 'Don\'t worry! Recharge your hearts and try again.'}
+                  </p>
+                  <button onClick={handleExit} className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-extrabold rounded-xl transition-all">
+                    {lang === 'pt' ? 'Voltar à Jornada' : 'Back to Journey'}
+                  </button>
+                </div>
+              )}
+
+              {gameState === 'completed' && (
+                <div className="text-center space-y-4 max-w-sm">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-md">
+                    <LucideIcon name="Award" size={32} />
+                  </div>
+                  <h2 className="text-xl font-extrabold">{lang === 'pt' ? 'Parabéns!' : 'Congratulations!'}</h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+                    {lang === 'pt' ? 'Você concluiu a lição com sucesso!' : 'You completed the lesson successfully!'}
+                  </p>
+                  <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-3 flex justify-around text-center">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-mono uppercase block">XP</span>
+                      <span className="text-base font-black text-emerald-500">+{xpEarned + lesson.xpReward}</span>
+                    </div>
+                    <div className="w-px bg-slate-200 dark:bg-slate-800 h-8 self-center" />
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-mono uppercase block">{lang === 'pt' ? 'Vida' : 'Life'}</span>
+                      <span className="text-base font-black text-rose-500">{lives}/5</span>
+                    </div>
+                  </div>
+                  <button onClick={handleExit} className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold rounded-xl transition-all">
+                    {lang === 'pt' ? 'Voltar à Jornada' : 'Back to Journey'}
+                  </button>
+                </div>
+              )}
+            </main>
+
+            {/* Answer check bar */}
+            {gameState === 'playing' && (
+              <footer className={`p-4 border-t-2 border-slate-200 dark:border-slate-850 ${
+                checked ? (isCorrect ? 'bg-[#58CC02]/10' : 'bg-rose-500/10') : 'bg-white dark:bg-slate-950'
+              }`}>
+                <div className="max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                    {checked && (
+                      <>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${isCorrect ? 'bg-[#58CC02]' : 'bg-rose-500'}`}>
+                          <LucideIcon name={isCorrect ? 'CheckCircle' : 'AlertTriangle'} size={18} />
+                        </div>
+                        <div>
+                          <p className={`font-black text-xs uppercase ${isCorrect ? 'text-[#58CC02]' : 'text-rose-600'}`}>
+                            {isCorrect ? (lang === 'pt' ? 'Excelente! Correto' : 'Correct!') : (lang === 'pt' ? 'Incorreto' : 'Incorrect')}
+                          </p>
+                          {!isCorrect && <p className="text-[10px] font-mono text-slate-500 uppercase">{lang === 'pt' ? 'Solução:' : 'Solution:'} <b className="font-sans font-bold text-rose-500">{currentEx.correctAnswer.replace(/\|/g, ' ')}</b></p>}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    disabled={!selected && currentEx.type !== 'order-code' && ordered.length === 0}
+                    onClick={checked ? handleContinue : handleCheck}
+                    className={`w-full sm:w-40 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-sm ${
+                      checked
+                        ? (isCorrect ? 'bg-[#58CC02] hover:bg-emerald-500 text-white' : 'bg-rose-500 hover:bg-rose-400 text-white')
+                        : 'bg-slate-900 hover:bg-black text-white dark:bg-[#58CC02] dark:hover:bg-emerald-500 disabled:opacity-35'
+                    }`}
+                  >
+                    {checked ? (lang === 'pt' ? 'Continuar' : 'Continue') : (lang === 'pt' ? 'Verificar' : 'Verify')}
+                  </button>
+                </div>
+              </footer>
+            )}
+          </div>
+        );
+      };
+
+      // Dueling Screen (Multiplayer Friend Challenge)
+      const Dueling = ({ lang, progress, onWinDuel }) => {
+        const [duelState, setDuelState] = useState('lobby'); // lobby, searching, playing, ended
+        const [idx, setIdx] = useState(0);
+        const [score, setScore] = useState(0);
+        const [timer, setTimer] = useState(15);
+        const [selectedAns, setSelectedAns] = useState(null);
+
+        const rivals = [
+          { id: 'r-1', name: 'Hugo_Vader', level: 3, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop' },
+          { id: 'r-2', name: 'Ana_Coders', level: 4, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop' }
+        ];
+
+        const questions = [
+          { q: 'Qual operador compara valor e tipo?', o: ['===', '==', '=', '!='], a: '===' },
+          { q: 'Qual método remove o último item de um array?', o: ['pop()', 'push()', 'shift()', 'remove()'], a: 'pop()' },
+          { q: 'Qual tag representa o rodapé da página?', o: ['<footer>', '<bottom>', '<end>', '<aside>'], a: '<footer>' }
+        ];
+
+        const currentQ = questions[idx];
+
+        useEffect(() => {
+          if (duelState !== 'playing') return;
+          if (timer <= 0) {
+            handleAnswer('');
+            return;
+          }
+          const tid = setInterval(() => setTimer(t => t - 1), 1000);
+          return () => clearInterval(tid);
+        }, [timer, duelState]);
+
+        const startDuel = () => {
+          setDuelState('searching');
+          setTimeout(() => {
+            setDuelState('playing');
+            setIdx(0);
+            setScore(0);
+            setTimer(15);
+            setSelectedAns(null);
+          }, 2000);
+        };
+
+        const handleAnswer = (opt) => {
+          if (selectedAns !== null) return;
+          setSelectedAns(opt);
+          const correct = opt === currentQ.a;
+          if (correct) {
+            setScore(s => s + 1);
+            sfx.playSuccess();
+          } else {
+            sfx.playFailure();
+          }
+
+          setTimeout(() => {
+            if (idx + 1 < questions.length) {
+              setIdx(idx + 1);
+              setTimer(15);
+              setSelectedAns(null);
+            } else {
+              setDuelState('ended');
+              const won = score + (correct ? 1 : 0) >= 2;
+              if (won) {
+                onWinDuel(100);
+                sfx.playLevelUp();
+              }
+            }
+          }, 1500);
+        };
+
+        return (
+          <div className="space-y-6 pb-12 max-w-xl mx-auto animate-fade-in">
+            {duelState === 'lobby' && (
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
+                    <LucideIcon name="Swords" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black uppercase tracking-tight">{lang === 'pt' ? 'Desafios 1v1 Rápidos' : 'Quick 1v1 Duels'}</h2>
+                    <p className="text-xs text-slate-400">{lang === 'pt' ? 'Encontre adversários online e dispute conhecimentos reais.' : 'Find rivals online and test your skills.'}</p>
+                  </div>
+                </div>
+
+                <div className="divide-y divide-slate-100 dark:divide-slate-850">
+                  {rivals.map(rival => (
+                    <div key={rival.id} className="flex items-center justify-between py-3">
+                      <div className="flex items-center gap-3">
+                        <img src={rival.avatar} alt={rival.name} className="w-10 h-10 rounded-full object-cover border" />
+                        <div>
+                          <h4 className="text-xs font-black">@{rival.name}</h4>
+                          <span className="text-[10px] text-slate-400">Level {rival.level}</span>
+                        </div>
+                      </div>
+                      <button onClick={startDuel} className="px-4 py-1.5 bg-[#58CC02] hover:bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider">
+                        {lang === 'pt' ? 'Desafiar' : 'Challenge'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {duelState === 'searching' && (
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm text-center space-y-4">
+                <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <h3 className="font-extrabold">{lang === 'pt' ? 'Procurando rival adequado...' : 'Searching for rival...'}</h3>
+                <p className="text-xs text-slate-400">{lang === 'pt' ? 'Aguardando o oponente aceitar o convite...' : 'Awaiting confirmation...'}</p>
+              </div>
+            )}
+
+            {duelState === 'playing' && (
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#58CC02] font-bold">Questão {idx + 1}/3</span>
+                  <div className="flex items-center gap-1.5 text-amber-500 font-bold">
+                    <LucideIcon name="Clock" size={16} />
+                    <span className="font-mono text-sm">{timer}s</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-extrabold text-center">{currentQ.q}</h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    {currentQ.o.map(opt => {
+                      const isSel = selectedAns === opt;
+                      return (
+                        <button
+                          key={opt}
+                          disabled={selectedAns !== null}
+                          onClick={() => handleAnswer(opt)}
+                          className={`w-full py-2.5 px-4 text-xs font-bold rounded-xl border transition-all text-left ${
+                            isSel 
+                              ? (opt === currentQ.a ? 'bg-[#58CC02]/20 border-[#58CC02] text-green-600' : 'bg-rose-500/20 border-rose-500 text-rose-600')
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {duelState === 'ended' && (
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto">
+                  <LucideIcon name="Trophy" size={32} />
+                </div>
+                <h3 className="text-lg font-black uppercase">{score >= 2 ? (lang === 'pt' ? 'Vitória Fantástica!' : 'Fantastic Victory!') : (lang === 'pt' ? 'Não foi dessa vez!' : 'Better luck next time!')}</h3>
+                <p className="text-xs text-slate-400">Você acertou {score} de 3 questões rápidas!</p>
+                {score >= 2 && <span className="text-[#58CC02] font-black text-xs block">+100 XP BONUS</span>}
+                <button onClick={() => setDuelState('lobby')} className="px-6 py-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white text-xs font-black uppercase rounded-xl tracking-wider">
+                  {lang === 'pt' ? 'Voltar' : 'Back'}
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // Forum Community Component
+      const Forum = ({ lang }) => {
+        const [posts, setPosts] = useState([
+          { id: 'p-1', author: 'Guilherme_Coder', title: 'Como funciona o flexbox na vertical?', content: 'Estou tentando centralizar verticalmente três botões em uma coluna.', likes: 12, likedByMe: false, subject: 'html', date: '2026-07-04', replies: [{ id: 'r-1', author: 'Ana_Coders', content: 'Use justify-content: center.' }] },
+          { id: 'p-2', author: 'Lucas_Py', title: 'Lista vs Tupla em Python?', content: 'Qual a diferença na prática real do código?', likes: 24, likedByMe: true, subject: 'python', date: '2026-07-03', replies: [] }
+        ]);
+        const [activeSub, setActiveSub] = useState('all');
+        const [search, setSearch] = useState('');
+        const [showModal, setShowModal] = useState(false);
+        const [newTitle, setNewTitle] = useState('');
+        const [newContent, setNewContent] = useState('');
+        const [newSub, setNewSub] = useState('html');
+        const [replyInputs, setReplyInputs] = useState({});
+
+        const handleLike = (id) => {
+          setPosts(prev => prev.map(p => {
+            if (p.id === id) {
+              return { ...p, likes: p.likedByMe ? p.likes - 1 : p.likes + 1, likedByMe: !p.likedByMe };
+            }
+            return p;
+          }));
+        };
+
+        const handleAddPost = (e) => {
+          e.preventDefault();
+          if (!newTitle.trim() || !newContent.trim()) return;
+          const post = {
+            id: `p-${posts.length + 1}`,
+            author: 'Você (Estudante)',
+            title: newTitle,
+            content: newContent,
+            likes: 0,
+            likedByMe: false,
+            subject: newSub,
+            date: 'Hoje',
+            replies: []
+          };
+          setPosts([post, ...posts]);
+          setNewTitle('');
+          setNewContent('');
+          setShowModal(false);
+        };
+
+        const handleAddReply = (postId) => {
+          const text = replyInputs[postId];
+          if (!text || !text.trim()) return;
+
+          setPosts(prev => prev.map(p => {
+            if (p.id === postId) {
+              return {
+                ...p,
+                replies: [...p.replies, { id: `r-${p.replies.length + 1}`, author: 'Você (Estudante)', content: text }]
+              };
+            }
+            return p;
+          }));
+          setReplyInputs({ ...replyInputs, [postId]: '' });
+        };
+
+        const filtered = posts.filter(p => {
+          const matchesSub = activeSub === 'all' || p.subject === activeSub;
+          const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.content.toLowerCase().includes(search.toLowerCase());
+          return matchesSub && matchesSearch;
+        });
+
+        return (
+          <div className="space-y-6 pb-12 max-w-xl mx-auto animate-fade-in">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-extrabold uppercase tracking-tight flex items-center gap-1.5">
+                  <LucideIcon name="MessageSquare" className="text-[#58CC02]" />
+                  <span>{lang === 'pt' ? 'Fórum da Comunidade' : 'Community Forum'}</span>
+                </h2>
+                <p className="text-xs text-slate-400">{lang === 'pt' ? 'Aprenda e compartilhe dúvidas com outros alunos.' : 'Learn and share code questions.'}</p>
+              </div>
+              <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#58CC02] hover:bg-emerald-500 text-white text-xs font-black uppercase rounded-xl tracking-wider">
+                {lang === 'pt' ? 'Novo Tópico' : 'New Post'}
+              </button>
+            </div>
+
+            {/* Filter and search */}
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                placeholder={lang === 'pt' ? 'Pesquisar tópicos...' : 'Search threads...'}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="flex-1 px-4 py-2 text-xs font-bold bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none"
+              />
+              <select value={activeSub} onChange={e => setActiveSub(e.target.value)} className="px-3 py-2 text-xs font-bold bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none">
+                <option value="all">Tudo</option>
+                <option value="html">HTML</option>
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+              </select>
+            </div>
+
+            {/* Modal post creation */}
+            {showModal && (
+              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl w-full max-w-md space-y-4">
+                  <h3 className="font-extrabold text-sm uppercase">{lang === 'pt' ? 'Criar Novo Tópico' : 'Create New Thread'}</h3>
+                  <form onSubmit={handleAddPost} className="space-y-3">
+                    <input required placeholder="Título do tópico" value={newTitle} onChange={e => setNewTitle(e.target.value)} className="w-full px-4 py-2 text-xs bg-slate-50 dark:bg-slate-800 border rounded-xl" />
+                    <select value={newSub} onChange={e => setNewSub(e.target.value)} className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border rounded-xl">
+                      <option value="html">HTML</option>
+                      <option value="python">Python</option>
+                      <option value="javascript">JavaScript</option>
+                    </select>
+                    <textarea required placeholder="Detalhes da sua dúvida..." value={newContent} onChange={e => setNewContent(e.target.value)} rows={3} className="w-full px-4 py-2 text-xs bg-slate-50 dark:bg-slate-800 border rounded-xl" />
+                    <div className="flex gap-2">
+                      <button type="submit" className="flex-1 py-2 bg-[#58CC02] text-white text-xs font-black rounded-xl">Publicar</button>
+                      <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl">Cancelar</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Thread feed */}
+            <div className="space-y-4">
+              {filtered.map(p => (
+                <div key={p.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-extrabold text-slate-500">@{p.author}</span>
+                    <span className="bg-[#58CC02]/10 text-[#58CC02] text-[10px] font-black px-2 py-0.5 rounded-full">{p.subject.toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black uppercase leading-snug">{p.title}</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{p.content}</p>
+                  </div>
+
+                  <div className="flex gap-4 border-t pt-2.5">
+                    <button onClick={() => handleLike(p.id)} className={`flex items-center gap-1.5 text-xs font-extrabold ${p.likedByMe ? 'text-rose-500' : 'text-slate-400'}`}>
+                      <LucideIcon name="Heart" className={p.likedByMe ? 'fill-current' : ''} size={14} />
+                      <span>{p.likes}</span>
+                    </button>
+                    <span className="flex items-center gap-1.5 text-xs text-slate-400 font-extrabold">
+                      <LucideIcon name="MessageSquare" size={14} />
+                      <span>{p.replies.length}</span>
+                    </span>
+                  </div>
+
+                  {/* Replies list */}
+                  {p.replies.length > 0 && (
+                    <div className="bg-slate-50 dark:bg-slate-850 p-2.5 rounded-xl space-y-2">
+                      {p.replies.map(r => (
+                        <div key={r.id} className="text-xs border-b last:border-0 pb-1.5 last:pb-0">
+                          <p className="font-black text-[10px] text-slate-500">@{r.author}</p>
+                          <p className="text-slate-600 dark:text-slate-300 leading-normal">{r.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Reply writing input */}
+                  <div className="flex gap-2 pt-1">
+                    <input
+                      type="text"
+                      placeholder={lang === 'pt' ? 'Responder...' : 'Reply...'}
+                      value={replyInputs[p.id] || ''}
+                      onChange={e => setReplyInputs({ ...replyInputs, [p.id]: e.target.value })}
+                      className="flex-1 px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border rounded-lg focus:outline-none"
+                    />
+                    <button onClick={() => handleAddReply(p.id)} className="px-3 bg-[#58CC02] text-white text-xs font-black rounded-lg">
+                      Enviar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      // Leaderboard tab component
+      const Leaderboard = ({ lang, progress }) => {
+        const t = {
+          title: lang === 'pt' ? 'Liga Semanal' : 'Weekly League',
+          sub: lang === 'pt' ? 'Competidores atualizados em tempo real.' : 'Competitors updated in real-time.',
+          position: lang === 'pt' ? 'Seu Posicionamento' : 'Your Position'
+        };
+
+        const list = [
+          { name: 'Ana_Coders', xp: 550, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=60&h=60&fit=crop' },
+          { name: 'Lucas_Py', xp: 480, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop' },
+          { name: 'Sofia_JS', xp: 410, avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop' },
+          { name: 'Você (Estudante)', xp: progress.xp, isUser: true, avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60&h=60&fit=crop' }
+        ].sort((a, b) => b.xp - a.xp);
+
+        return (
+          <div className="space-y-6 pb-12 max-w-xl mx-auto animate-fade-in">
+            <div className="text-center space-y-1">
+              <h2 className="text-xl font-extrabold uppercase flex items-center justify-center gap-1.5">
+                <LucideIcon name="Award" className="text-amber-500" />
+                <span>{t.title}</span>
+              </h2>
+              <p className="text-xs text-slate-400">{t.sub}</p>
+            </div>
+
+            <div className="space-y-3">
+              {list.map((competitor, i) => (
+                <div
+                  key={competitor.name}
+                  className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
+                    competitor.isUser 
+                      ? 'bg-[#58CC02]/5 border-[#58CC02] border-b-4' 
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-sm font-black text-slate-400">#{i + 1}</span>
+                    <img src={competitor.avatar} alt={competitor.name} className="w-9 h-9 rounded-full object-cover border" />
+                    <div>
+                      <h4 className={`text-xs font-black ${competitor.isUser ? 'text-[#58CC02]' : ''}`}>@{competitor.name}</h4>
+                      {competitor.isUser && <span className="text-[9px] text-[#58CC02] uppercase font-bold">{t.position}</span>}
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-black">{competitor.xp} XP</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      // Stats and Calendar Component
+      const Stats = ({ lang, progress, onChangeGoal }) => {
+        const [subTab, setSubTab] = useState('overview');
+        const [events, setEvents] = useState([
+          { id: 'e-1', title: 'Revisar tags básicas', date: '2026-07-08', time: '14:00', subject: 'html' },
+          { id: 'e-2', title: 'Treinar loops em Python', date: '2026-07-09', time: '10:00', subject: 'python' }
+        ]);
+        const [eTitle, setETitle] = useState('');
+        const [eDate, setEDate] = useState('');
+        const [eTime, setETime] = useState('14:00');
+        const [eSubj, setESubj] = useState('html');
+
+        const handleAddEvent = (e) => {
+          e.preventDefault();
+          if (!eTitle.trim() || !eDate) return;
+          const ev = { id: `e-${events.length + 1}`, title: eTitle, date: eDate, time: eTime, subject: eSubj };
+          setEvents([...events, ev]);
+          setETitle('');
+          setEDate('');
+        };
+
+        return (
+          <div className="space-y-6 pb-12 max-w-xl mx-auto animate-fade-in">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-black uppercase tracking-tight">{lang === 'pt' ? 'Painel de Desempenho' : 'Performance Dashboard'}</h2>
+              <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <button onClick={() => setSubTab('overview')} className={`px-3 py-1.5 text-xs font-bold rounded-lg ${subTab === 'overview' ? 'bg-white dark:bg-slate-700 shadow' : 'text-slate-400'}`}>
+                  Métricas
+                </button>
+                <button onClick={() => setSubTab('calendar')} className={`px-3 py-1.5 text-xs font-bold rounded-lg ${subTab === 'calendar' ? 'bg-white dark:bg-slate-700 shadow' : 'text-slate-400'}`}>
+                  Agenda
+                </button>
+              </div>
+            </div>
+
+            {subTab === 'overview' ? (
+              <div className="space-y-6">
+                {/* SVG Chart display */}
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+                  <h3 className="text-xs font-black uppercase text-slate-400">{lang === 'pt' ? 'Tempo diário de estudo (minutos)' : 'Daily study time (minutes)'}</h3>
+                  <SVGBarChart data={progress.weeklyStudyTime} lang={lang} />
+                </div>
+
+                {/* Adjust Goal box */}
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                  <h3 className="text-xs font-black uppercase text-slate-400">{lang === 'pt' ? 'Meta Ativa' : 'Active Target'}</h3>
+                  <p className="text-xs font-bold">{lang === 'pt' ? 'Sua meta ativa é estudar' : 'Your target is to study'} <b className="text-[#58CC02]">{progress.dailyGoalMinutes} min</b> {lang === 'pt' ? 'por dia.' : 'per day.'}</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[15, 30, 60].map(m => (
+                      <button
+                        key={m}
+                        onClick={() => onChangeGoal(m)}
+                        className={`py-2 text-xs font-black rounded-lg border-2 ${progress.dailyGoalMinutes === m ? 'border-[#58CC02] bg-[#58CC02]/5 text-[#58CC02]' : 'border-slate-100'}`}
+                      >
+                        {m} min
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Events list */}
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border space-y-3">
+                  <h3 className="text-xs font-black uppercase text-slate-400">{lang === 'pt' ? 'Agenda de Estudos' : 'Schedule'}</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {events.map(ev => (
+                      <div key={ev.id} className="p-2 border-b last:border-0 text-xs">
+                        <p className="font-bold">{ev.title}</p>
+                        <span className="text-[10px] text-slate-400">{ev.date} @ {ev.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Add block form */}
+                <form onSubmit={handleAddEvent} className="bg-white dark:bg-slate-900 p-4 rounded-xl border space-y-3">
+                  <h3 className="text-xs font-black uppercase text-slate-400">{lang === 'pt' ? 'Adicionar Prática' : 'Add Practice'}</h3>
+                  <input required placeholder="Título" value={eTitle} onChange={e => setETitle(e.target.value)} className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border rounded" />
+                  <input required type="date" value={eDate} onChange={e => setEDate(e.target.value)} className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border rounded" />
+                  <button type="submit" className="w-full py-2 bg-[#58CC02] text-white text-xs font-black uppercase rounded">Agendar</button>
+                </form>
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // GitHub Synced Activity Integration Tracker Component
+      const GitHubSync = ({ lang, progress, onSync }) => {
+        const [username, setUsername] = useState('');
+        const [syncing, setSyncing] = useState(false);
+
+        const gridValues = [
+          [0, 1, 2, 0, 3, 4, 1, 0, 2, 3, 0, 1, 2, 3, 4],
+          [1, 0, 3, 2, 0, 1, 4, 2, 0, 1, 3, 4, 0, 2, 1],
+          [2, 3, 0, 4, 1, 0, 2, 3, 4, 1, 0, 2, 3, 0, 4],
+          [0, 1, 4, 3, 2, 1, 0, 2, 3, 4, 1, 0, 2, 3, 1],
+          [3, 4, 1, 0, 2, 3, 4, 1, 0, 2, 3, 4, 1, 0, 2],
+        ];
+
+        const getCellColor = (val) => {
+          switch (val) {
+            case 0: return 'bg-slate-100 dark:bg-slate-800';
+            case 1: return 'bg-emerald-200 dark:bg-emerald-950/40';
+            case 2: return 'bg-emerald-400 dark:bg-emerald-800/60';
+            case 3: return 'bg-emerald-500';
+            case 4: return 'bg-emerald-600';
+            default: return 'bg-slate-100';
+          }
+        };
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (!username.trim()) return;
+          setSyncing(true);
+          setTimeout(() => {
+            onSync(username);
+            setSyncing(false);
+          }, 1500);
+        };
+
+        return (
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-4 max-w-xl mx-auto animate-fade-in mt-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-extrabold uppercase text-sm flex items-center gap-1.5">
+                  <LucideIcon name="Github" />
+                  <span>{lang === 'pt' ? 'Integração com GitHub' : 'GitHub Integration'}</span>
+                </h3>
+                <p className="text-xs text-slate-400">{lang === 'pt' ? 'Transforme commits em bônus diários de XP.' : 'Sync commits to earn bonus learning XP.'}</p>
+              </div>
+              {progress.githubSynced && (
+                <span className="bg-[#58CC02]/10 text-[#58CC02] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">Sincronizado</span>
+              )}
+            </div>
+
+            {!progress.githubSynced ? (
+              <form onSubmit={handleSubmit} className="flex gap-2">
+                <input
+                  required
+                  placeholder={lang === 'pt' ? 'Usuário do GitHub' : 'GitHub Username'}
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  className="flex-1 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border rounded-xl focus:outline-none"
+                />
+                <button type="submit" disabled={syncing} className="px-4 py-2 bg-[#58CC02] text-white text-xs font-black uppercase rounded-xl">
+                  {syncing ? '...' : (lang === 'pt' ? 'Conectar' : 'Connect')}
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-400 uppercase font-mono font-bold">{lang === 'pt' ? 'Matriz de Contribuições (Mock):' : 'Contribution Graph:'}</p>
+                <div className="flex gap-1 justify-center p-3 rounded-lg bg-slate-50 dark:bg-slate-950 overflow-x-auto">
+                  <div className="grid grid-rows-5 gap-1">
+                    {gridValues.map((row, rIdx) => (
+                      <div key={rIdx} className="flex gap-1">
+                        {row.map((val, cIdx) => (
+                          <div key={cIdx} className={`w-3 h-3 rounded-sm ${getCellColor(val)} hover:scale-110 transition-all`} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // Profile settings & Danger Zone UI
+      const ProfileSettings = ({ lang, setLang, theme, toggleTheme, progress, onUpdateProgress, onResetProgress }) => {
+        const handleBackup = () => {
+          alert(lang === 'pt' ? 'Backup automático enviado para a nuvem CodeLingo!' : 'Automatic state backup synchronized successfully!');
+        };
+
+        const handleResetClick = () => {
+          const confirmed = window.confirm(lang === 'pt' ? 'Tem certeza absoluta?' : 'Are you sure you want to delete all data?');
+          if (confirmed) {
+            onResetProgress();
+          }
+        };
+
+        return (
+          <div className="space-y-6 pb-12 max-w-xl mx-auto animate-fade-in">
+            <h2 className="text-lg font-black uppercase tracking-tight">{lang === 'pt' ? 'Ajustes Gerais' : 'General Adjustments'}</h2>
+
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm divide-y divide-slate-100 dark:divide-slate-800/80">
+              <div className="flex justify-between items-center py-3">
+                <div>
+                  <h4 className="text-xs font-bold">{lang === 'pt' ? 'Backup Automático' : 'Auto Backup'}</h4>
+                  <p className="text-[10px] text-slate-400">Guarde seu progresso na nuvem</p>
+                </div>
+                <button onClick={handleBackup} className="px-3 py-1 bg-slate-50 dark:bg-slate-800 border text-xs rounded-lg font-bold">
+                  Backup Now
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center py-3">
+                <div>
+                  <h4 className="text-xs font-bold">{lang === 'pt' ? 'Zona de Perigo' : 'Danger Zone'}</h4>
+                  <p className="text-[10px] text-slate-400">Excluir todos os registros salvos</p>
+                </div>
+                <button onClick={handleResetClick} className="px-3 py-1 bg-rose-500 hover:bg-rose-600 text-white text-xs rounded-lg font-bold">
+                  Zerar Tudo
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // Root App Component Container
+      const App = () => {
+        const DEFAULT_PROGRESS = {
+          xp: 45,
+          level: 1,
+          hearts: 5,
+          streak: 1,
+          lastStudyDate: new Date().toISOString().split('T')[0],
+          unlockedAchievements: [],
+          htmlLevel: 1,
+          pythonLevel: 1,
+          jsLevel: 1,
+          dailyGoalMinutes: 15,
+          studyTimeTodayMinutes: 0,
+          weeklyStudyTime: [
+            { day: 'Seg', minutes: 12 },
+            { day: 'Ter', minutes: 0 },
+            { day: 'Qua', minutes: 15 },
+            { day: 'Qui', minutes: 8 },
+            { day: 'Sex', minutes: 0 },
+            { day: 'Sáb', minutes: 10 },
+            { day: 'Dom', minutes: 5 }
+          ],
+          githubUsername: null,
+          githubSynced: false,
+          isOffline: false,
+          syncStatus: 'synced',
+          twoFactorEnabled: false,
+          biometricsEnabled: false
+        };
+
+        const [progress, setProgress] = useState(() => {
+          try {
+            const saved = localStorage.getItem('codelingo_user_progress');
+            if (saved) return { ...DEFAULT_PROGRESS, ...JSON.parse(saved) };
+          } catch(e) { console.warn(e); }
+          return DEFAULT_PROGRESS;
+        });
+
+        const [currentTab, setCurrentTab] = useState('lessons');
+        const [lang, setLang] = useState('pt');
+        const [theme, setTheme] = useState(() => {
+          try {
+            const t = localStorage.getItem('codelingo_theme');
+            if (t === 'light' || t === 'dark') return t;
+          } catch(e) { console.warn(e); }
+          return 'dark';
+        });
+
+        const [activeLesson, setActiveLesson] = useState(null);
+        const [toast, setToast] = useState(null);
+
+        useEffect(() => {
+          localStorage.setItem('codelingo_user_progress', JSON.stringify(progress));
+        }, [progress]);
+
+        useEffect(() => {
+          localStorage.setItem('codelingo_theme', theme);
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        }, [theme]);
+
+        const showToast = (title, desc) => {
+          setToast({ id: Math.random().toString(), title, desc });
+          setTimeout(() => setToast(null), 4500);
+        };
+
+        const calculateLevel = (newXp, oldLevel) => {
+          const l = Math.floor(newXp / 100) + 1;
+          if (l > oldLevel) {
+            setTimeout(() => {
+              sfx.playLevelUp();
+              showToast(lang === 'pt' ? 'NOVO NÍVEL!' : 'LEVEL UP!', lang === 'pt' ? `Parabéns! Você alcançou o nível ${l}!` : `Reached level ${l}!`);
+            }, 800);
+          }
+          return l;
+        };
+
+        const auditAchievements = (p) => {
+          const u = [...p.unlockedAchievements];
+          if (!u.includes('ach-1') && (p.htmlLevel > 1 || p.pythonLevel > 1 || p.jsLevel > 1)) {
+            u.push('ach-1');
+            showToast('Conquista Desbloqueada!', 'Primeiro Passo - Lição Concluída');
+          }
+          if (!u.includes('ach-3') && p.xp >= 200) {
+            u.push('ach-3');
+            showToast('Conquista Desbloqueada!', 'Acumulador de XP - 200 XP');
+          }
+          if (!u.includes('ach-4') && p.githubSynced) {
+            u.push('ach-4');
+            showToast('Conquista Desbloqueada!', 'Dev Conectado');
+          }
+          return u;
+        };
+
+        const handleFinishLesson = (xp, livesLost, didPass) => {
+          setActiveLesson(null);
+          if (!didPass) return;
+
+          setProgress(prev => {
+            let nextHtml = prev.htmlLevel;
+            let nextPython = prev.pythonLevel;
+            let nextJs = prev.jsLevel;
+
+            if (activeLesson?.subject === 'html') nextHtml = prev.htmlLevel + 1;
+            if (activeLesson?.subject === 'python') nextPython = prev.pythonLevel + 1;
+            if (activeLesson?.subject === 'javascript') nextJs = prev.jsLevel + 1;
+
+            const nextXp = prev.xp + xp;
+            const nextLvl = calculateLevel(nextXp, prev.level);
+
+            const updated = {
+              ...prev,
+              xp: nextXp,
+              level: nextLvl,
+              htmlLevel: nextHtml,
+              pythonLevel: nextPython,
+              jsLevel: nextJs,
+              studyTimeTodayMinutes: prev.studyTimeTodayMinutes + 15,
+              hearts: Math.min(5, prev.hearts + 1)
+            };
+            updated.unlockedAchievements = auditAchievements(updated);
+            return updated;
+          });
+        };
+
+        const handleRestoreHearts = () => {
+          if (progress.xp < 100) {
+            alert(lang === 'pt' ? 'Você precisa de 100 XP!' : 'You need 100 XP!');
+            return;
+          }
+          setProgress(prev => ({ ...prev, xp: prev.xp - 100, hearts: 5 }));
+        };
+
+        const handleSyncGitHub = (user) => {
+          setProgress(prev => {
+            const next = { ...prev, githubUsername: user, githubSynced: true };
+            next.unlockedAchievements = auditAchievements(next);
+            return next;
+          });
+        };
+
+        const handleWinDuel = (xp) => {
+          setProgress(prev => {
+            const next = { ...prev, xp: prev.xp + xp };
+            next.level = calculateLevel(next.xp, prev.level);
+            return next;
+          });
+        };
+
+        const handleGoalChange = (g) => {
+          setProgress(prev => ({ ...prev, dailyGoalMinutes: g }));
+        };
+
+        const handleResetProgress = () => {
+          setProgress(DEFAULT_PROGRESS);
+          showToast('Reiniciado', 'Seu progresso foi apagado!');
+        };
+
+        return (
+          <div className="flex flex-col md:flex-row min-h-screen">
+            {activeLesson ? (
+              <QuizContainer
+                lesson={activeLesson}
+                lang={lang}
+                onClose={() => setActiveLesson(null)}
+                onFinish={handleFinishLesson}
+              />
+            ) : (
+              <>
+                <Sidebar
+                  currentTab={currentTab}
+                  setCurrentTab={setCurrentTab}
+                  lang={lang}
+                  setLang={setLang}
+                  theme={theme}
+                  toggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                  progress={progress}
+                  onRestoreHearts={handleRestoreHearts}
+                />
+
+                <main className="flex-grow p-4 md:p-8 max-w-4xl mx-auto w-full pb-20 md:pb-8">
+                  {currentTab === 'lessons' && (
+                    <div className="space-y-6">
+                      <LessonsList
+                        lessons={LESSONS}
+                        progress={progress}
+                        onSelectLesson={setActiveLesson}
+                        lang={lang}
+                      />
+                      <GitHubSync
+                        lang={lang}
+                        progress={progress}
+                        onSync={handleSyncGitHub}
+                      />
+                    </div>
+                  )}
+
+                  {currentTab === 'ranking' && (
+                    <Leaderboard lang={lang} progress={progress} />
+                  )}
+
+                  {currentTab === 'duels' && (
+                    <Dueling lang={lang} progress={progress} onWinDuel={handleWinDuel} />
+                  )}
+
+                  {currentTab === 'forum' && (
+                    <Forum lang={lang} />
+                  )}
+
+                  {currentTab === 'stats' && (
+                    <Stats lang={lang} progress={progress} onChangeGoal={handleGoalChange} />
+                  )}
+
+                  {currentTab === 'settings' && (
+                    <ProfileSettings
+                      lang={lang}
+                      setLang={setLang}
+                      theme={theme}
+                      toggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                      progress={progress}
+                      onUpdateProgress={(u) => setProgress(prev => ({ ...prev, ...u }))}
+                      onResetProgress={handleResetProgress}
+                    />
+                  )}
+                </main>
+
+                {/* Toast alert popup */}
+                {toast && (
+                  <div className="fixed bottom-16 md:bottom-6 right-6 bg-slate-900 border border-slate-800 text-white p-4 rounded-xl flex items-center gap-3 shadow-xl z-50">
+                    <LucideIcon name="Award" className="text-emerald-500 animate-bounce" />
+                    <div>
+                      <h4 className="text-xs font-black">{toast.title}</h4>
+                      <p className="text-[10px] text-slate-300">{toast.desc}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        );
+      };
+
+      // Mount Application on screen
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
   </body>
 </html>
-
